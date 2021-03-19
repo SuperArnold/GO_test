@@ -3,13 +3,11 @@ package main
 import "fmt"
 
 var (
-	foo string
-	bar int
+	foo string = "Arnold"
+	bar int    = 100
 )
 
 func main() {
-	foo = "Arnold"
-	bar = 100
 	fmt.Println(foo)
 	fmt.Println(bar)
 	fmt.Println("Done")
