@@ -3,8 +3,8 @@ package main
 import "fmt"
 
 const (
-	monday = 1
-	tusday = 2
+	monday = iota + 1
+	tusday //不需再打
 )
 
 func main() {
