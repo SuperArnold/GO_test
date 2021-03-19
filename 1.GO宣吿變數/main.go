@@ -2,8 +2,10 @@ package main
 
 import "fmt"
 
-var foo string
-var bar int
+var (
+	foo string
+	bar int
+)
 
 func main() {
 	foo = "Arnold"
@@ -11,5 +13,4 @@ func main() {
 	fmt.Println(foo)
 	fmt.Println(bar)
 	fmt.Println("Done")
-
 }
