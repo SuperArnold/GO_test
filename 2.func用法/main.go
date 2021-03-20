@@ -5,18 +5,28 @@ import (
 	"strings"
 )
 
-func getUserList(username, email string) string {
+type searchOpts struct {
+	username string
+	email    string
+}
+
+func getUserList(opt searchOpts) string {
 	sql := "select * from"
 	where := []string{}
-	if username != "" {
-		where = append(where, fmt.Sprintf("username = '%s'", username))
+	if opt.username != "" {
+		where = append(where, fmt.Sprintf("username = '%s'", opt.username))
 	}
-	if email != "" {
-		where = append(where, fmt.Sprintf("email = '%s'", email))
+	if opt.email != "" {
+		where = append(where, fmt.Sprintf("email = '%s'", opt.email))
 	}
 	return sql + " where " + strings.Join(where, " or ")
 }
 func main() {
-	fmt.Println(getUserList("Arnold", ""))
-	fmt.Println(getUserList("Arnold", "arnold@gmail.com"))
+	fmt.Println(getUserList(searchOpts{
+		username: "Arnold",
+	}))
+	fmt.Println(getUserList(searchOpts{
+		username: "Arnold",
+		email:    "arnold@gmail.com",
+	}))
 }
