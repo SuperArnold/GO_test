@@ -11,17 +11,19 @@ func worker(jobchan_work <-chan int) {
 		time.Sleep(1 * time.Second)
 	}
 }
-
+func enqueue(job int, jobchan_queue chan<- int) bool {
+	select {
+	case jobchan_queue <- job:
+		return true
+	default:
+		return false
+	}
+}
 func main() {
 	jobchan := make(chan int, 1)
-
 	go worker(jobchan)
-	jobchan <- 1
-	fmt.Println("main is 1")
-	jobchan <- 2
-	fmt.Println("main is 2")
-	jobchan <- 3
-	fmt.Println("main is 3")
-
-	time.Sleep(2 * time.Second)
+	fmt.Println(enqueue(1, jobchan))
+	fmt.Println(enqueue(2, jobchan))
+	fmt.Println(enqueue(3, jobchan))
+	time.Sleep(5 * time.Second)
 }
