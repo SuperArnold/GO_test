@@ -1,11 +1,23 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
-	bar := func(i, j int) int { //執行將func寫進去
-		return i + j
+	//一般範例
+	bar := func() {
+		fmt.Println("Hello")
 	}
-	fmt.Printf("%T\n", bar)
-	fmt.Println(bar(1, 5))
+	bar()
+
+	//不用參數接func卻可以執行的方法
+	func() {
+		fmt.Println("World")
+	}() //這裡一定要加
+
+	//使用go routine的方式在背景執行
+	go func(i, j int) int {
+		return i + j
+	}(2, 2) //這裡一定要加
 }
