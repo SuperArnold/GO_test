@@ -2,22 +2,21 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
-func main() {
-	//一般範例
-	bar := func() {
-		fmt.Println("Hello")
+func getUserList(username, email string) string {
+	sql := "select * from"
+	where := []string{}
+	if username != "" {
+		where = append(where, fmt.Sprintf("username = '%s'", username))
 	}
-	bar()
-
-	//不用參數接func卻可以執行的方法
-	func() {
-		fmt.Println("World")
-	}() //這裡一定要加
-
-	//使用go routine的方式在背景執行
-	go func(i, j int) int {
-		return i + j
-	}(2, 2) //這裡一定要加
+	if email != "" {
+		where = append(where, fmt.Sprintf("email = '%s'", email))
+	}
+	return sql + " where " + strings.Join(where, " or ")
+}
+func main() {
+	fmt.Println(getUserList("Arnold", ""))
+	fmt.Println(getUserList("Arnold", "arnold@gmail.com"))
 }
