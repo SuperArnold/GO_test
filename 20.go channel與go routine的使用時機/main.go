@@ -2,32 +2,58 @@ package main
 
 import (
 	"fmt"
+	"sync"
 )
 
-func add(i int) []int {
-	// chan := make(chan int, i)
+func addByShareMemory(n int) []int {
 	var ints []int
-	channel := make(chan int, i)
+	var wg sync.WaitGroup
+	var mux sync.Mutex
 
-	for n := 0; n < i; n++ {
-		go func(channel chan<- int, j int) {
-			channel <- j
-		}(channel, n)
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			defer wg.Done()
+			mux.Lock()
+			ints = append(ints, i)
+			mux.Unlock()
+		}(i)
 	}
 
-	for m := range channel {
-		ints = append(ints, m)
+	wg.Wait()
 
-		if len(ints) == i {
+	return ints
+}
+
+func addByShareCommunicate(n int) []int {
+	var ints []int
+	channel := make(chan int, n)
+
+	for i := 0; i < n; i++ {
+		go func(channel chan<- int, order int) {
+			channel <- order
+		}(channel, i)
+	}
+
+	for i := range channel {
+		ints = append(ints, i)
+
+		if len(ints) == n {
 			break
 		}
 	}
+
 	close(channel)
+
 	return ints
 }
 
 func main() {
-	foo := add(10)
+	foo := addByShareMemory(10)
+	fmt.Println(len(foo))
+	fmt.Println(foo)
+
+	foo = addByShareCommunicate(10)
 	fmt.Println(len(foo))
 	fmt.Println(foo)
 }
