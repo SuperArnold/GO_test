@@ -2,25 +2,27 @@ package main
 
 import (
 	"fmt"
-	"runtime"
-	"sync"
 )
 
-func init() {
-	runtime.GOMAXPROCS(1)
-}
 func add(i int) []int {
 	// chan := make(chan int, i)
 	var ints []int
-	var wg sync.WaitGroup
-	wg.Add(i)
+	channel := make(chan int, i)
+
 	for n := 0; n < i; n++ {
-		go func(j int) {
-			defer wg.Done()
-			ints = append(ints, j)
-		}(n)
+		go func(channel chan<- int, j int) {
+			channel <- j
+		}(channel, n)
 	}
-	wg.Wait()
+
+	for m := range channel {
+		ints = append(ints, m)
+
+		if len(ints) == i {
+			break
+		}
+	}
+	close(channel)
 	return ints
 }
 
