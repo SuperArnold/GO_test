@@ -2,9 +2,13 @@ package main
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 )
 
+func init() {
+	runtime.GOMAXPROCS(1)
+}
 func add(i int) []int {
 	// chan := make(chan int, i)
 	var ints []int
