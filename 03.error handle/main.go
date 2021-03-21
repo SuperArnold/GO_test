@@ -5,20 +5,37 @@ import (
 	"fmt"
 )
 
+type errUserExist struct {
+	Name string
+}
+
+func (e errUserExist) Error() string {
+	return fmt.Sprintf("Username %s is exist.", e.Name)
+}
+func isErrUserExist(err error) bool { //判斷是不是自己定義的，error這個interface本身就有判斷
+	_, ok := err.(errUserExist)
+	return ok
+}
 func checkUserExist(username string) (bool, error) {
 	if username == "foo" {
-		return true, fmt.Errorf("Username %s is exist.", username) //使用fmt.errorf
+		return true, errUserExist{Name: username}
 	}
-	if username == "bar" {
-		return true, errors.New(fmt.Sprintf("Username %s is exist.", username)) //使用errors.New定義新的error
+	if username == "foo" {
+		return true, errors.New("Username bar is exist.")
 	}
 	return false, nil
 }
 func main() {
 	if _, foo_err := checkUserExist("foo"); foo_err != nil {
-		fmt.Println(foo_err)
+		if isErrUserExist(foo_err) {
+			fmt.Println(foo_err)
+		}
 	}
 	if _, bar_err := checkUserExist("bar"); bar_err != nil {
-		fmt.Println(bar_err)
+		if isErrUserExist(bar_err) {
+			fmt.Println(bar_err)
+		}
+	} else {
+		fmt.Println("bar is not struct error")
 	}
 }
