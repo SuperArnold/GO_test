@@ -4,12 +4,14 @@ import (
 	"fmt"
 )
 
-func init() {
-	fmt.Println("init 1")
+var global = convert()
+
+func convert() int {
+	return 100
 }
 func init() {
-	fmt.Println("init 2")
+	global = 0
 }
 func main() {
-	fmt.Println("main function")
+	fmt.Println("Global is ", global)
 }
