@@ -6,9 +6,7 @@ import (
 
 func check(s int) {
 	switch s {
-	case 0:
-		fallthrough
-	case 1:
+	case 0, 1:
 		fmt.Println("Value is ", s)
 	}
 }
