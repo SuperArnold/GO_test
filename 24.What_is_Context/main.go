@@ -2,26 +2,26 @@ package main
 
 import (
 	"fmt"
-	"sync"
 	"time"
 )
 
 func main() {
-	wg := sync.WaitGroup{}
-	wg.Add(2)
+	stop := make(chan bool)
 
 	go func() {
-		time.Sleep(1 * time.Second)
-		fmt.Println("Job 1 finish.")
-		wg.Done()
+		for {
+			select {
+			case <-stop:
+				fmt.Println("stop job.")
+				return
+			default:
+				fmt.Println("still work")
+				time.Sleep(1 * time.Second)
+			}
+		}
 	}()
-
-	go func() {
-		time.Sleep(3 * time.Second)
-		fmt.Println("Job 2 finish.")
-		wg.Done()
-	}()
-
-	wg.Wait()
+	time.Sleep(5 * time.Second)
+	stop <- true
+	time.Sleep(1 * time.Second)
 	fmt.Println("All Job Done.")
 }
