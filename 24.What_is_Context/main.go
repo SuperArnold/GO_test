@@ -1,17 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
 
 func main() {
-	stop := make(chan bool)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
 		for {
 			select {
-			case <-stop:
+			case <-ctx.Done():
 				fmt.Println("stop job.")
 				return
 			default:
@@ -21,7 +22,7 @@ func main() {
 		}
 	}()
 	time.Sleep(5 * time.Second)
-	stop <- true
+	cancel()
 	time.Sleep(1 * time.Second)
 	fmt.Println("All Job Done.")
 }
