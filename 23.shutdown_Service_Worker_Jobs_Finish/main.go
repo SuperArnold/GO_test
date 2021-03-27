@@ -11,9 +11,10 @@ import (
 	"time"
 )
 
+// Consumer struct
 type Consumer struct {
 	inputChan chan int
-	jobChan   chan int
+	jobsChan  chan int
 }
 
 func getRandomTime() int {
@@ -22,7 +23,6 @@ func getRandomTime() int {
 }
 
 func withContextFunc(ctx context.Context, f func()) context.Context {
-
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		c := make(chan os.Signal)
@@ -36,9 +36,10 @@ func withContextFunc(ctx context.Context, f func()) context.Context {
 			f()
 		}
 	}()
-	return ctx
 
+	return ctx
 }
+
 func (c *Consumer) queue(input int) bool {
 	select {
 	case c.inputChan <- input:
@@ -47,24 +48,28 @@ func (c *Consumer) queue(input int) bool {
 	default:
 		return false
 	}
-
 }
 
-func (c *Consumer) startConsumer(ctx context.Context) {
+func (c Consumer) startConsumer(ctx context.Context) {
 	for {
 		select {
 		case job := <-c.inputChan:
-			c.jobChan <- job
+			select {
+			case c.jobsChan <- job:
+			default:
+				log.Println("job channel has been closed. num:", job)
+			}
 			if ctx.Err() != nil {
-				close(c.jobChan)
+				close(c.jobsChan)
 				return
 			}
 		case <-ctx.Done():
-			close(c.jobChan)
+			close(c.jobsChan)
 			return
 		}
 	}
 }
+
 func (c *Consumer) process(num, job int) {
 	n := getRandomTime()
 	log.Printf("Sleeping %d seconds...\n", n)
@@ -72,45 +77,37 @@ func (c *Consumer) process(num, job int) {
 	log.Println("worker:", num, " job value:", job)
 }
 
-func (c *Consumer) worker(ctx context.Context, num int, wg *sync.WaitGroup) {
+func (c *Consumer) worker(num int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	log.Println("start the worker", num)
-	for {
-		select {
-		case job := <-c.inputChan:
-			if ctx.Err() != nil {
-				log.Println("get next job", job, "and close the worker", num)
-				return
-			}
-			c.process(num, job)
-		case <-ctx.Done():
-			log.Println("close the worker", num)
-			return
-		}
 
+	for job := range c.jobsChan {
+		c.process(num, job)
 	}
 
+	log.Printf("Stop the worker %d\n", num)
 }
 
-const poolSize = 2
+const poolSize = 5
 
 func main() {
-	finish := make(chan bool)
+	finished := make(chan bool)
 	wg := &sync.WaitGroup{}
 	wg.Add(poolSize)
+	// create the consumer
 	consumer := Consumer{
 		inputChan: make(chan int, 10),
-		jobChan:   make(chan int, poolSize),
+		jobsChan:  make(chan int, poolSize),
 	}
 
 	ctx := withContextFunc(context.Background(), func() {
 		log.Println("cancel from ctrl+c event")
 		wg.Wait()
-		close(finish)
+		close(finished)
 	})
 
 	for i := 0; i < poolSize; i++ {
-		go consumer.worker(ctx, i, wg)
+		go consumer.worker(i, wg)
 	}
 
 	go consumer.startConsumer(ctx)
@@ -128,6 +125,6 @@ func main() {
 		consumer.queue(10)
 	}()
 
-	<-finish
+	<-finished
 	log.Println("Game over")
 }
