@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -16,6 +17,10 @@ func main() {
 	flag.StringVar(&port, "port", "8080", "server port")
 	flag.StringVar(&port, "p", "8080", "server port")
 	flag.Parse()
+
+	if p, ok := os.LookupEnv("PORT"); ok {
+		port = p
+	}
 
 	http.HandleFunc("/", handler)
 	log.Println("http server port is " + port)
