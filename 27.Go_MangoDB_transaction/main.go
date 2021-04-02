@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/globalsign/mgo"
@@ -15,6 +16,7 @@ import (
 
 var globalDB *mgo.Database
 var account = "arnold"
+var mu = &sync.Mutex{}
 
 type currency struct {
 	ID      bson.ObjectId `json:"id" bson:"_id,omitempty"`
@@ -30,6 +32,8 @@ func Random(min, max int) int {
 
 func pay(w http.ResponseWriter, r *http.Request) {
 	entry := currency{}
+	mu.Lock()
+	defer mu.Unlock()
 	err := globalDB.C("bank").Find(bson.M{"account": account}).One(&entry)
 	if err != nil {
 		panic(err)
