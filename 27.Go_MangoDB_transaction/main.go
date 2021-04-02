@@ -16,7 +16,8 @@ import (
 
 var globalDB *mgo.Database
 var account = "arnold"
-var mu = &sync.Mutex{}
+var in chan string
+var out chan Data
 
 type currency struct {
 	ID      bson.ObjectId `json:"id" bson:"_id,omitempty"`
@@ -25,37 +26,42 @@ type currency struct {
 	Code    string        `bson:"code"`
 }
 
+type Data struct {
+	Account string
+	Result  float64
+}
+
 func Random(min, max int) int {
 	rand.Seed(time.Now().UTC().UnixNano())
 	return rand.Intn(max-min+1) + min
 }
 
 func pay(w http.ResponseWriter, r *http.Request) {
-	entry := currency{}
-	mu.Lock()
-	defer mu.Unlock()
-	err := globalDB.C("bank").Find(bson.M{"account": account}).One(&entry)
-	if err != nil {
-		panic(err)
-	}
 
-	wait := Random(1, 100)
-	time.Sleep(time.Duration(wait) * time.Millisecond)
-	entry.Amount = entry.Amount + 50.00
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		in <- account
+		for {
+			select {
+			case result := <-out:
+				fmt.Printf("%+v\n", result)
+				wg.Done()
+				return
+			}
+		}
 
-	err = globalDB.C("bank").UpdateId(entry.ID, &entry)
+	}(&wg)
 
-	if err != nil {
-		panic("update error")
-	}
-
-	fmt.Printf("%+v\n", entry)
-
+	wg.Wait()
 	io.WriteString(w, "ok")
 
 }
 
 func main() {
+	in = make(chan string)
+	out = make(chan Data)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8000"
@@ -70,6 +76,37 @@ func main() {
 	if err != nil {
 		panic("insert error")
 	}
+
+	go func(in *chan string) {
+		for {
+			select {
+			case data := <-*in:
+				entry := currency{}
+
+				err := globalDB.C("bank").Find(bson.M{"account": data}).One(&entry)
+				if err != nil {
+					panic(err)
+				}
+
+				wait := Random(1, 100)
+				time.Sleep(time.Duration(wait) * time.Millisecond)
+				entry.Amount = entry.Amount + 50.00
+
+				err = globalDB.C("bank").UpdateId(entry.ID, &entry)
+
+				if err != nil {
+					panic("update error")
+				}
+
+				out <- Data{
+					Account: account,
+					Result:  entry.Amount,
+				}
+
+			}
+		}
+
+	}(&in)
 
 	log.Println("Listen server on " + port + " port")
 	http.HandleFunc("/", pay)
