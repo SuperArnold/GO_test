@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -13,13 +14,8 @@ import (
 
 var globalDB *mgo.Database
 var account = "arnold"
-var in chan Data
-
-// Data struct
-type Data struct {
-	Account string
-	Result  *chan float64
-}
+var in chan string
+var out chan result
 
 type currency struct {
 	ID      bson.ObjectId `json:"id" bson:"_id,omitempty"`
@@ -28,75 +24,76 @@ type currency struct {
 	Code    string        `bson:"code"`
 }
 
+type result struct {
+	Account string
+	Result  float64
+}
+
 func pay(w http.ResponseWriter, r *http.Request) {
+
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-
 	go func(wg *sync.WaitGroup) {
-		result := make(chan float64)
-		in <- Data{
-			Account: account,
-			Result:  &result,
-		}
+		in <- account
 		for {
 			select {
-			case result := <-result:
-				log.Printf("account: %v, result: %+v\n", account, result)
+			case result := <-out:
+				fmt.Printf("%+v\n", result)
 				wg.Done()
+				return
 			}
 		}
+
 	}(&wg)
 
 	wg.Wait()
-
 	io.WriteString(w, "ok")
+
 }
 
 func main() {
+	in = make(chan string)
+	out = make(chan result)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8000"
 	}
-	in = make(chan Data)
-
-	session, err := mgo.Dial("localhost:27017")
-
-	if err != nil {
-		panic("can't connect mongodb server")
-	}
-
-	globalDB = session.DB("logs")
-
+	session, _ := mgo.Dial("localhost:27017")
+	globalDB = session.DB("queue")
 	globalDB.C("bank").DropCollection()
 
 	user := currency{Account: account, Amount: 1000.00, Code: "USD"}
-	err = globalDB.C("bank").Insert(&user)
+	err := globalDB.C("bank").Insert(&user)
 
 	if err != nil {
 		panic("insert error")
 	}
 
-	go func(in *chan Data) {
+	go func(in *chan string) {
 		for {
 			select {
 			case data := <-*in:
 				entry := currency{}
-				// step 1: get current amount
-				err := globalDB.C("bank").Find(bson.M{"account": data.Account}).One(&entry)
 
+				err := globalDB.C("bank").Find(bson.M{"account": data}).One(&entry)
 				if err != nil {
 					panic(err)
 				}
 
-				//step 3: subtract current balance and update back to database
-				entry.Amount = entry.Amount + 50.000
+				entry.Amount = entry.Amount + 50.00
+
 				err = globalDB.C("bank").UpdateId(entry.ID, &entry)
 
 				if err != nil {
 					panic("update error")
 				}
 
-				*data.Result <- entry.Amount
+				out <- result{
+					Account: account,
+					Result:  entry.Amount,
+				}
+
 			}
 		}
 
