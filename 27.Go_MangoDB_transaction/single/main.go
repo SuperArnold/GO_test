@@ -22,6 +22,7 @@ type currency struct {
 	Amount  float64       `bson:"amount"`
 	Account string        `bson:"account"`
 	Code    string        `bson:"code"`
+	Version int           `bson:version`
 }
 
 type result struct {
@@ -75,7 +76,7 @@ func main() {
 			select {
 			case data := <-*in:
 				entry := currency{}
-
+			LOOP:
 				err := globalDB.C("bank").Find(bson.M{"account": data}).One(&entry)
 				if err != nil {
 					panic(err)
@@ -83,10 +84,16 @@ func main() {
 
 				entry.Amount = entry.Amount + 50.00
 
-				err = globalDB.C("bank").UpdateId(entry.ID, &entry)
+				err = globalDB.C("bank").Update(bson.M{
+					"_id":     entry.ID,
+					"version": entry.Version,
+				}, bson.M{"$set": map[string]interface{}{
+					"amount":  entry.Amount,
+					"version": (entry.Version + 1),
+				}})
 
 				if err != nil {
-					panic("update error")
+					goto LOOP
 				}
 
 				out <- result{
