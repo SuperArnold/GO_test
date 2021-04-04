@@ -22,7 +22,7 @@ type currency struct {
 	Amount  float64       `bson:"amount"`
 	Account string        `bson:"account"`
 	Code    string        `bson:"code"`
-	Version int           `bson:version`
+	Version int           `bson:"version"`
 }
 
 type result struct {
