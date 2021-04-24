@@ -2,22 +2,31 @@ package main
 
 import (
 	"fmt"
+	"time"
 )
 
-type car struct {
-	name string
+type email struct {
+	from string
+	to   string
 }
 
-func (c car) setCarName01(s string) { //這裡其實是有兩個struct，而改的是這個function內的struct
-	c.name = s
+func (e *email) From(s string) {
+	e.from = s
 }
-func (c *car) setCarName02(s string) {
-	c.name = s
+func (e *email) To(s string) {
+	e.to = s
+}
+func (e *email) Send() {
+	fmt.Printf("Send emaol From %s To %s\n", e.from, e.to)
 }
 func main() {
-	c := &car{}
-	c.setCarName02("bar")
-	fmt.Println(c.name)
-	c.setCarName01("foo")
-	fmt.Println(c.name)
+	email := &email{}
+	for i := 1; i <= 10; i++ {
+		go func(i int) {
+			email.From(fmt.Sprintf("User%02d", i))
+			email.To(fmt.Sprintf("User%02d", i+1))
+			email.Send()
+		}(i)
+	}
+	time.Sleep(1 * time.Second)
 }
